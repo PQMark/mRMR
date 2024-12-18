@@ -17,7 +17,7 @@ func RedundancyUpdate(data [][]float64, featureToConsider []int, target int, red
 	return redundancyMap
 }
 
-// Pearson Correlation 
+// Absolute value of Pearson Correlation 
 func PearsonCorrelation(data1, data2 []float64) float64 {
 	if len(data1) != len(data2) {
 		panic("feature slices must have the same length")
@@ -42,5 +42,5 @@ func PearsonCorrelation(data1, data2 []float64) float64 {
 		cov += data1[i] * data2[i]
 	}
 
-	return cov / (sd1 * sd2)
+	return math.Abs(cov / (sd1 * sd2))
 }

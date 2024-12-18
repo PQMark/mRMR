@@ -12,44 +12,60 @@ type Numeric interface{
 }
 
 type ParasmRMR struct{
-	Data			DatamRMR
-	Discretization	bool 
-	binSize			int
-	Relevance 		string 
-	Redundancy 		string
-	Calculation 	string 
-	maxFeatures		int	
-	RelevanceFunc	func ([]float64, []int) float64
-	RedundancyFunc  func ([]float64, []float64) float64
+	Data				DatamRMR
+	Discretization		bool 
+	BinSize				int
+	Method 				string
+	Calculation 		string 
+	MaxFeatures			int	
+	RedundancyMethod 	string
+	Threshold			float64
+	QLevel				int
+	RelevanceFunc		func ([]float64, []int) float64
+	RedundancyFunc  	func ([]float64, []float64) float64
 }
 
 type DatamRMR struct{
 	X 	[][]float64
-	class []int
+	Class []int
 }
 
-func (paras *ParasmRMR) mRMR() ([]int, []float64, map[[2]int]float64){
+func (paras *ParasmRMR) MRMR() ([]int, []float64, map[[2]int]float64){
 	
 	paras.defaults()
+	paras.setups()
 
-	if paras.Discretization {
-		paras.Data.X = Discretization(paras.Data.X, paras.binSize)
+	if paras.Discretization && paras.Method != "nmi-nmi"{
+		paras.Data.X, _ = Discretization(paras.Data.X, paras.BinSize)
 	}
 
-	relevanceAll := Relevance(paras.Data.X, paras.Data.class, paras.RelevanceFunc)
+	if paras.Method == "nmi-nmi" {
+		_, paras.Data.X = Discretization(paras.Data.X, paras.QLevel)
+	}
 
-	featuresToConsider := make([]int, 0, len(paras.Data.X[0]))	
-	selectedFeatures := make([]int, 0, len(paras.Data.X[0]))
-	redundancyMap := make(map[[2]int]float64)
+	relevanceAll := Relevance(paras.Data.X, paras.Data.Class, paras.RelevanceFunc)
 
-	// Discard if relevance MI = 0
+	// Filter out features with zero relevance
+	featuresToConsider := make([]int, 0, len(paras.Data.X[0]))
 	for i, val := range relevanceAll {
-		if val > 0.0 {
+		if val > 0 {
 			featuresToConsider = append(featuresToConsider, i)
 		}
 	}
 	
-	for c := 0; c < paras.maxFeatures; c++ {
+	if paras.Method == "fs-pearson" {    //fs
+		relevanceAll = MinMaxNormalization(relevanceAll)
+	}
+
+	if paras.Method == "nmi-nmi" {
+		n := UniqueClass(paras.Data.Class)
+		relevanceAll = Scaling(relevanceAll, math.Log2(float64(n)))
+	}
+
+	selectedFeatures := make([]int, 0, paras.MaxFeatures)
+	redundancyMap := make(map[[2]int]float64)
+
+	for c := 0; c < paras.MaxFeatures; c++ {
 
 		relevance := selectByIndex(relevanceAll, featuresToConsider)
 		redundancy := make([]float64, len(featuresToConsider))
@@ -61,25 +77,46 @@ func (paras *ParasmRMR) mRMR() ([]int, []float64, map[[2]int]float64){
 			// update map 
 			redundancyMap = RedundancyUpdate(paras.Data.X, featuresToConsider, lastSelectedF, redundancyMap, paras.RedundancyFunc)
 
-			for i, val1 := range featuresToConsider {
-				sum := 0.0
+			for i, f := range featuresToConsider {
+				s := 0.0
+				for _, sel := range selectedFeatures {
+					val := redundancyMap[[2]int{sel, f}]
 
-				for _, val2 := range selectedFeatures {
-					key := [2]int{val2, val1}
-					sum += redundancyMap[key]
+					if paras.RedundancyMethod == "avg"{
+						s += val
+					} else if paras.RedundancyMethod == "max" {
+						if val > s {
+							s = val
+						}
+					}
 				}
 
-				redundancy[i] = sum / float64(len(selectedFeatures))
+				if paras.RedundancyMethod == "avg" {
+					divisor := float64(len(selectedFeatures))
+					if paras.Method == "nmi-nmi" {
+						divisor = math.Log2(float64(paras.QLevel))
+					} 
+
+					redundancy[i] = s / divisor
+				}
+
+				if paras.RedundancyMethod == "max" {
+					redundancy[i] = s 
+				}
+				
 			}
+			
 		}
 
 		fmt.Println("relevance:", relevance)
 		fmt.Println("Redundancy:", redundancy)
 
-		score := PairwiseDeduction(relevance, redundancy)
-		fmt.Println(score)
+		score := PairwiseOperation(relevance, redundancy, paras.Calculation)
+		fmt.Println(score, "\n")
 
-		if CheckIfAllNegative(score) {
+		// Early stopping
+		if (paras.Calculation == "diff" && CheckIfAllNegative(score)) ||
+			(paras.Calculation == "quo" && CheckIfAllSmallerOne(score)) {
 			break
 		}
 
@@ -93,34 +130,52 @@ func (paras *ParasmRMR) mRMR() ([]int, []float64, map[[2]int]float64){
 }
 
 func (paras *ParasmRMR) defaults() {
-	if paras.binSize == 0 {
-		paras.binSize = int(math.Sqrt(float64(len(paras.Data.X))))
+	if paras.BinSize == 0 {
+		paras.BinSize = int(math.Sqrt(float64(len(paras.Data.X))))
 	}
 
 	if paras.Calculation == "" {
 		paras.Calculation = "diff"
 	}
 
-	if paras.Relevance == "" {
-		paras.Relevance = "mutual"
-	}
-
-	if paras.Redundancy == "" {
-		paras.Redundancy = "mutual"
+	if paras.Method == "" {
+		paras.Method = "mi-mi"
 	}
 	
-	if paras.maxFeatures == 0 {
-		paras.maxFeatures = 20
+	if paras.RedundancyMethod == "" {
+		paras.RedundancyMethod = "avg"
 	}
 
-	if paras.Relevance == strings.ToLower("MI") {
+	if paras.MaxFeatures == 0 {
+		paras.MaxFeatures = len(paras.Data.X[0])
+	}
+
+	if paras.Threshold == 0{
+		paras.Threshold = 0.01
+	}
+
+	if paras.MaxFeatures > len(paras.Data.X[0]) {
+		log.Printf("Warning: maxFeatures (%d) exceeds number of features (%d). Adjusting.",
+			paras.MaxFeatures, len(paras.Data.X[0]))
+		paras.MaxFeatures = len(paras.Data.X[0])
+	}
+
+}
+
+func (paras *ParasmRMR) setups() {
+	
+	switch strings.ToLower(paras.Method) {
+	case "mi-mi":
+		paras.RelevanceFunc = MutualInfo
 		paras.RedundancyFunc = MutualInfo
-	}
-
-	// check the methods
-
-	if paras.maxFeatures > len(paras.Data.X[0]) {
-		log.Printf("Warning: maxFeatures value exceeds the number of features. Adjusting maxFeatures to the number of features.")
-		paras.maxFeatures = len(paras.Data.X[0])
+	case "fs-pearson":
+		paras.RelevanceFunc = FStatistic
+		paras.RedundancyFunc = PearsonCorrelation
+	case "nmi-nmi":
+		paras.RelevanceFunc = MutualInfo
+		paras.RedundancyFunc = MutualInfo
+		paras.QLevel = QuantizationLevel(paras.Data.X, paras.Threshold)
+	default:
+		panic("Invalid method. Choose from 'mi-mi', 'fs-pearson', 'nmi-nmi'")
 	}
 }

@@ -27,7 +27,7 @@ func TestPearsonCorrelation(t *testing.T) {
 		{
 			data1: []float64{0,0,0,1,1},
 			data2: []float64{1,1,1,0,0},
-			expected: -1.0,
+			expected: 1.0,  // -1.0 
 		},
 		{
 			data1: []float64{1,2,3,4,5},

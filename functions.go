@@ -5,10 +5,9 @@ import (
 	"math"
 )
 
-
-func Discretization (data [][]float64, binSize int) [][]float64 {
+func Discretization (data [][]float64, binSize int) ([][]float64, [][]float64) {
 	if len(data) == 0 || len(data[0]) == 0 {
-		return nil 
+		return nil, nil 
 	}
 
 	r := len(data)
@@ -33,8 +32,11 @@ func Discretization (data [][]float64, binSize int) [][]float64 {
 	}
 
 	discreteData := make([][]float64, r)
+	quantizedData := make([][]float64, r)
+
 	for i := range discreteData {
 		discreteData[i] = make([]float64, c)
+		quantizedData[i] = make([]float64, c)
 	}
 
 	for j := 0; j < c; j++ {
@@ -48,11 +50,16 @@ func Discretization (data [][]float64, binSize int) [][]float64 {
 				binIdx--
 			}
 
+			// replaced by bin indices
 			discreteData[i][j] = float64(binIdx)
+			
+			// replaced by midpoints of bins
+			binMidpoint := min[j] + (float64(binIdx)+0.5)*binWidth
+			quantizedData[i][j] = binMidpoint
 		}
 	}
 
-	return discreteData
+	return discreteData, quantizedData
 
 }
 
@@ -82,16 +89,28 @@ func selectByIndex[T any](data []T, idx []int) []T {
 	return r
 }
 
-func PairwiseDeduction[T Numeric](data1, data2 []T) []T {
+func PairwiseOperation(data1, data2 []float64, operation string) []float64 {
 	if len(data1) != len(data2) {
 		panic("Fail to perform pairwise sum: Unequal length of data")
 	}
 
-	r := make([]T, len(data1))
+	const epsilon = 1e-8
+	r := make([]float64, len(data1))
 
 	for i, val := range data1 {
-		sum := val - data2[i]
-		r[i] = sum
+		switch operation {
+		case "diff":
+			r[i] = val - data2[i]
+		case "quo":
+			divisor := data2[i]
+			if divisor == 0 {
+                divisor = epsilon //avoid division by zero
+            }
+
+			r[i] = val / divisor
+		default:
+			panic("Invalid operation. Choose from 'diff' or 'quo'")
+		}
 	}
 
 	return r 
@@ -121,9 +140,105 @@ func Delete[T any] (data []T, idx int) []T {
 
 func CheckIfAllNegative(data []float64) bool {
 	for _,val := range data {
-		if val > 0.0 && val > 0.001{
+		if val > 0.0{
 			return false
 		}
 	}
 	return true
+}
+
+func CheckIfAllSmallerOne(data []float64) bool {
+	for _, val := range data {
+		if val > 1.0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func MinMaxNormalization(data []float64) []float64 {
+	
+	min := 0.0
+	max := 0.0
+	new := make([]float64, len(data))
+
+	for _, val := range data {
+		if val > max {
+			max = val
+		}
+
+		if val < min {
+			min = val
+		}
+	}
+
+	diff := max - min
+
+	for i, val := range data {
+		new[i] = (val - min) / diff
+	}
+
+	return new
+}
+
+// get the quantization level
+func QuantizationLevel(data [][]float64, threshold float64) int {
+	level := 2 
+
+	numFeatures := len(data[0])
+
+	for {
+		maxError := 0.0
+
+		_, quantizedData := Discretization(data, level)
+
+		for i := 0; i < numFeatures; i++ {
+			quantizedFeature := getCol(quantizedData, i)
+			originalFeature := getCol(data, i)
+
+			QError := QuantizationError(quantizedFeature, originalFeature)
+
+			if QError > maxError {
+				maxError = QError
+			}
+
+		}
+
+		if maxError <= threshold {
+			return level
+		}
+
+		level++
+	}
+}
+
+// get the quantization error
+func QuantizationError(quantizedData, originalData []float64) float64 {
+	n := float64(len(originalData))
+	err := 0.0
+
+	for i := range originalData {
+		err += math.Pow(quantizedData[i] - originalData[i], 2)
+	}
+
+	return err / n
+}
+
+func Scaling(data []float64, factor float64) []float64 {
+	for i := range data {
+		data[i] /= factor
+	}
+
+	return data
+}
+
+func UniqueClass(data []int) int {
+	m := make(map[int]int)
+
+	for _, val := range data {
+		m[val] ++
+	}
+
+	return len(m)
 }
