@@ -8,9 +8,8 @@
 ## mRMR Variants
 
 The core idea of mRMR is to select a feature subset `S` from the feature set `F`, such that: 
-$$
-S = \underset{S \subseteq F}{\operatorname{argmax}} \left[ \sum_{F_i \in S} \text{Relevance}(F_i, Y) - \frac{1}{|S|} \sum_{F_i, F_j \in S} \text{Redundancy}(F_i, F_j) \right]
-$$
+
+<img src="img/eq1.jpg" alt="mRMR equation" width="600"/>
 
 Classical mRMR employs mutual information for both relevance and redundancy calculations. However, this approach struggles with continuous data, as it requires estimating the probability density function (PDF), which is computationally expensive. As a workaround, one can
 - Discretize the data: Convert continuous features into discrete bins.
@@ -19,19 +18,16 @@ Classical mRMR employs mutual information for both relevance and redundancy calc
 ### Normalization-Based Approach
 A known drawback of mRMR is the imbalance between the two terms in the subtraction. To address this, **Vinh et al.** proposed normalizing each term:
 
-$$
-S = \underset{S \subseteq F}{\operatorname{argmax}} \left[ \sum_{F_i \in S} \frac{I(F_i, Y)}{\log _2 (|\Omega _C|)} - \frac{1}{\log _2 (N)} \sum_{F_i, F_j \in S} I(F_i, F_j) \right]
-$$
+<img src="img/eq2.png" alt="mRMR equation" width="500"/>
 
 Where:
-- $ |\Omega_C| $: Number of classes.
-- $ N $: Quantization level.
+- |Ω<sub>C</sub>|: Number of classes.
+- *N*: Quantization level.
 
 ### Quotient-Based Approach
 An alternative variation of mRMR considers the quotient of relevance and redundancy instead of their difference:
-$$
-S = \underset{S \subseteq F}{\operatorname{argmax}} \left[ \frac{\sum_{F_i \in S} \text{Relevance}(F_i, Y)}{\frac{1}{|S|} \sum_{F_i, F_j \in S} \text{Redundancy}(F_i, F_j)} \right]
-$$
+
+<img src="img/eq3.png" alt="mRMR equation" width="440"/>
 
 ## Install
 ```bash
@@ -75,3 +71,14 @@ featureSelected := GetFeatures(features, featureSelectedIndices)
   *Options:* `"avg"`, `"max"`.
 - **Threshold** (float64): Controls the quantization error for normalized MI. (Default: `0.01`)
 - **Verbose** (bool): If `true`, prints intermediate relevance, redundancy, and combined results.
+
+
+## Example on MNIST
+Both methods achieve a weighted F1 score above 95%. Remarkably, mRMR selects far fewer pixel features than Boruta while still maintaining comparable performance.  
+**mRMR (mi-mi):**  
+<img src="img/mRMR_FeatureImportance_plot.png" alt="mRMR Feature Importance" width="700"/>  
+
+**Boruta:**  
+<img src="img/Boruta_FeatureImportance_plot.png" alt="Boruta Feature Importance" width="700"/>  
+
+- *Note: The importance scores are derived from a Random Forest trained on a stratified sample of 1,000 MNIST instances (digits 0, 1, and 7) with selected pixels, with 20% held out for testing.*
