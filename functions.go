@@ -225,7 +225,7 @@ func QuantizationError(quantizedData, originalData []float64) float64 {
 	return err / n
 }
 
-func Scaling(data []float64, factor float64) []float64 {
+func scaling(data []float64, factor float64) []float64 {
 	for i := range data {
 		data[i] /= factor
 	}
@@ -233,7 +233,7 @@ func Scaling(data []float64, factor float64) []float64 {
 	return data
 }
 
-func UniqueClass(data []int) int {
+func uniqueClass(data []int) int {
 	m := make(map[int]int)
 
 	for _, val := range data {
@@ -241,4 +241,14 @@ func UniqueClass(data []int) int {
 	}
 
 	return len(m)
+}
+
+func GetFeatures(features []string, indices []int) []string {
+	selectedFeatures := make([]string, len(indices))
+
+	for i, idx := range indices {
+		selectedFeatures[i] = features[idx]
+	}
+
+	return selectedFeatures
 }

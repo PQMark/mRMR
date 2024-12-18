@@ -11,6 +11,7 @@ type Numeric interface{
 	int | int8 | int16 | int32 | int64 | float32 | float64
 }
 
+// ParasmRMR holds parameters and functions needed to execute the mRMR algorithm.
 type ParasmRMR struct{
 	Data				DatamRMR
 	Discretization		bool 
@@ -20,16 +21,23 @@ type ParasmRMR struct{
 	MaxFeatures			int	
 	RedundancyMethod 	string
 	Threshold			float64
+	Verbose				bool
 	QLevel				int
 	RelevanceFunc		func ([]float64, []int) float64
 	RedundancyFunc  	func ([]float64, []float64) float64
 }
 
+// DatamRMR holds the input dataset and its class labels.
+// Each row is an instance
 type DatamRMR struct{
 	X 	[][]float64
 	Class []int
 }
 
+// MRMR executes the mRMR feature selection and returns:
+// - selectedFeatures: the indices of selected features
+// - relevanceAll: the relevance scores of all features
+// - redundancyMap: a map storing pairwise redundancy values
 func (paras *ParasmRMR) MRMR() ([]int, []float64, map[[2]int]float64){
 	
 	paras.defaults()
@@ -58,8 +66,8 @@ func (paras *ParasmRMR) MRMR() ([]int, []float64, map[[2]int]float64){
 	}
 
 	if paras.Method == "nmi-nmi" {
-		n := UniqueClass(paras.Data.Class)
-		relevanceAll = Scaling(relevanceAll, math.Log2(float64(n)))
+		n := uniqueClass(paras.Data.Class)
+		relevanceAll = scaling(relevanceAll, math.Log2(float64(n)))
 	}
 
 	selectedFeatures := make([]int, 0, paras.MaxFeatures)
@@ -108,11 +116,13 @@ func (paras *ParasmRMR) MRMR() ([]int, []float64, map[[2]int]float64){
 			
 		}
 
-		fmt.Println("relevance:", relevance)
-		fmt.Println("Redundancy:", redundancy)
-
 		score := PairwiseOperation(relevance, redundancy, paras.Calculation)
-		fmt.Println(score, "\n")
+		
+		if paras.Verbose {
+			fmt.Println("relevance:", relevance)
+			fmt.Println("Redundancy:", redundancy)
+			fmt.Println(score, "\n")
+		}
 
 		// Early stopping
 		if (paras.Calculation == "diff" && CheckIfAllNegative(score)) ||
@@ -129,6 +139,7 @@ func (paras *ParasmRMR) MRMR() ([]int, []float64, map[[2]int]float64){
 	return selectedFeatures, relevanceAll, redundancyMap
 }
 
+// defaults sets default parameter values for the mRMR procedure.
 func (paras *ParasmRMR) defaults() {
 	if paras.BinSize == 0 {
 		paras.BinSize = int(math.Sqrt(float64(len(paras.Data.X))))
@@ -139,7 +150,7 @@ func (paras *ParasmRMR) defaults() {
 	}
 
 	if paras.Method == "" {
-		paras.Method = "mi-mi"
+		paras.Method = "nmi-nmi"
 	}
 	
 	if paras.RedundancyMethod == "" {
@@ -162,6 +173,7 @@ func (paras *ParasmRMR) defaults() {
 
 }
 
+// setups sets the parameters based on the selected method.
 func (paras *ParasmRMR) setups() {
 	
 	switch strings.ToLower(paras.Method) {
