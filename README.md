@@ -82,3 +82,12 @@ Both methods achieve a weighted F1 score above 95%. Remarkably, mRMR selects far
 <img src="img/Boruta_FeatureImportance_plot.png" alt="Boruta Feature Importance" width="700"/>  
 
 - *Note: The importance scores are derived from a Random Forest trained on a stratified sample of 1,000 MNIST instances (digits 0, 1, and 7) with selected pixels, with 20% held out for testing.*
+
+
+## References
+1. **Maximum Relevance and Minimum Redundancy Feature Selection Methods for a Marketing Machine Learning Platform**  
+   [Hanchuan Peng, Fuhui Long, and Chris Ding](https://arxiv.org/pdf/1908.05376)  
+   *arXiv preprint arXiv:1908.05376, 2019.*
+2. **A Novel Feature Selection Method Based on Normalized Mutual Information**  
+   [Jun Zhang, Pengjun Deng, and Yong Yu](https://link.springer.com/article/10.1007/s10489-011-0315-y)  
+   *Applied Intelligence, 2011.*
