@@ -1,7 +1,7 @@
 package main
 
 import(
-	"src/mRMR"
+	"github.com/PQMark/mRMR"
 	"math"
     "testing"
 )

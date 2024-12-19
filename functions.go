@@ -252,3 +252,14 @@ func GetFeatures(features []string, indices []int) []string {
 
 	return selectedFeatures
 }
+
+func mean(lst []float64) float64 {
+
+	a := 0.0
+
+	for _, val := range lst {
+		a += val
+	}
+
+	return a / float64(len(lst))
+}

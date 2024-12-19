@@ -2,8 +2,7 @@ package mRMR
 
 import "math"
 
-// map [selected, not selected]MI
-// target: target feature index
+// RedundancyUpdate calculates the redundancy between each unselected feature with last selected feature and updates the redundancy map.
 func RedundancyUpdate(data [][]float64, featureToConsider []int, target int, redundancyMap map[[2]int]float64, redundancyFunc func([]float64, []float64) float64) map[[2]int]float64 {
 
 	data2 := getCol(data, target)
@@ -17,24 +16,24 @@ func RedundancyUpdate(data [][]float64, featureToConsider []int, target int, red
 	return redundancyMap
 }
 
-// Absolute value of Pearson Correlation 
+// PearsonCorrelation returns the absolute value of pearson correlation coefficient
 func PearsonCorrelation(data1, data2 []float64) float64 {
 	if len(data1) != len(data2) {
 		panic("feature slices must have the same length")
 	}
 	
-	mean1 := Mean(data1)
-	mean2 := Mean(data2)
+	mean1 := mean(data1)
+	mean2 := mean(data2)
 
 	for i := range data1 {
 		data1[i] -= mean1
 		data2[i] -= mean2
 	}
 
-	sd1 := SumofSquares(data1)
+	sd1 := sumOfSquares(data1)
 	sd1 = math.Sqrt(sd1)
 
-	sd2 := SumofSquares(data2)
+	sd2 := sumOfSquares(data2)
 	sd2 = math.Sqrt(sd2)
 
 	cov := 0.0

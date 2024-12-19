@@ -8,7 +8,7 @@ import (
 	"sort"
 )
 
-// return Data, Features, and Class
+// ReadCSV reads a CSV file and returns data, feature strings and class lables.
 func ReadCSV(filepath string, irrelevantCols, irrelevantRows []int, featureIndex, groupIndex int, colFeatures bool) ([][]float64, []string, []int) {
 	featureIndex -= 1
 	groupIndex -= 1

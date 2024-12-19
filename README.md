@@ -18,7 +18,7 @@ Classical mRMR employs mutual information for both relevance and redundancy calc
 ### Normalization-Based Approach
 A known drawback of mRMR is the imbalance between the two terms in the subtraction. To address this, **Vinh et al.** proposed normalizing each term:
 
-<img src="examples/img/eq2.png" alt="mRMR equation" width="500"/>
+<img src="examples/img/eq2.jpg" alt="mRMR equation" width="500"/>
 
 Where:
 - |Ω<sub>C</sub>|: Number of classes.
@@ -27,7 +27,7 @@ Where:
 ### Quotient-Based Approach
 An alternative variation of mRMR considers the quotient of relevance and redundancy instead of their difference:
 
-<img src="examples/img/eq3.png" alt="mRMR equation" width="440"/>
+<img src="examples/img/eq3.jpg" alt="mRMR equation" width="440"/>
 
 ## Install
 ```bash

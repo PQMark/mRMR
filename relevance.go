@@ -4,7 +4,7 @@ import (
 	"math"
 )
 
-// 
+// Relevance computes the relevance of each feature with respect to the class and returns the scores as a slice.
 func Relevance(data [][]float64, class []int, relevanceFunc func([]float64, []int) float64) []float64 {
 	n := len(data[0])
 	relevance := make([]float64, n)
@@ -19,19 +19,19 @@ func Relevance(data [][]float64, class []int, relevanceFunc func([]float64, []in
 }
 
 
-// MI 
+// MutualInfo calculates the mutual information between two data slices.
 func MutualInfo[T1, T2 Numeric](data1 []T1, data2 []T2) float64 {
 
-	HA := ShannonEntropy(data1)
-	HB := ShannonEntropy(data2)
-	HAB := ShannonJointEntropy(data1, data2)
+	HA := shannonEntropy(data1)
+	HB := shannonEntropy(data2)
+	HAB := shannonJointEntropy(data1, data2)
 
 	mi := HA + HB - HAB
 
 	return mi
 }
 
-func ShannonEntropy[T Numeric](sample []T) float64 {
+func shannonEntropy[T Numeric](sample []T) float64 {
 	n := float64(len(sample))
 	count := make(map[float64]int)
 	sum := 0.0
@@ -49,7 +49,7 @@ func ShannonEntropy[T Numeric](sample []T) float64 {
 	return -sum 
 }
 
-func ShannonJointEntropy[T1, T2 Numeric](data1 []T1, data2 []T2) float64 {
+func shannonJointEntropy[T1, T2 Numeric](data1 []T1, data2 []T2) float64 {
 	if len(data1) != len(data2) {
 		panic("Fail to calculate joint entropy: Unequal length of data")
 	}
@@ -74,25 +74,25 @@ func ShannonJointEntropy[T1, T2 Numeric](data1 []T1, data2 []T2) float64 {
 	return -sum
 }
 
-// F statistics
+// FStatistic returns the f-statistic of feature and class. 
 func FStatistic(feature []float64, class []int) float64 {
 	bigN := float64(len(feature))
 
-	normalized_ss := SquaresofSum(feature) / bigN
+	normalized_ss := squaresOfSum(feature) / bigN
 	ssbn := 0.0
 
-	groups := GroupByClass(feature, class)
+	groups := groupByClass(feature, class)
 	for _, g := range groups {
-		ssbn += SquaresofSum(g) / float64(len(g))
+		ssbn += squaresOfSum(g) / float64(len(g))
 	}
 	ssbn -= normalized_ss
 
-	mean := Mean(feature)
+	mean := mean(feature)
 	for i := range feature {
 		feature[i] -= mean
 	}
 
-	sstotal := SumofSquares(feature)
+	sstotal := sumOfSquares(feature)
 
 	sswn := sstotal - ssbn
 	dfbn := float64(len(groups)) - 1  
@@ -104,7 +104,7 @@ func FStatistic(feature []float64, class []int) float64 {
 	return msb / msw
 }
 
-func GroupByClass(data []float64, class []int) [][]float64 {
+func groupByClass(data []float64, class []int) [][]float64 {
 	
 	if len(data) != len(class) {
 		panic("data and class slices must have the same length")
@@ -124,7 +124,7 @@ func GroupByClass(data []float64, class []int) [][]float64 {
 }
 
 // return (a + b + ...)^2
-func SquaresofSum (data []float64) float64 {
+func squaresOfSum(data []float64) float64 {
 	sum := 0.0
 
 	for _, val := range data {
@@ -135,7 +135,7 @@ func SquaresofSum (data []float64) float64 {
 }
 
 // return a^2 + b^2 + ...
-func SumofSquares (data []float64) float64 {
+func sumOfSquares(data []float64) float64 {
 	sum := 0.0
 
 	for _, val := range data {
@@ -143,17 +143,4 @@ func SumofSquares (data []float64) float64 {
 	} 
 
 	return sum 
-}
-
-
-
-func Mean(lst []float64) float64 {
-
-	a := 0.0
-
-	for _, val := range lst {
-		a += val
-	}
-
-	return a / float64(len(lst))
 }
