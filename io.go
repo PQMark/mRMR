@@ -16,6 +16,8 @@ func ReadCSV(filepath string, irrelevantCols, irrelevantRows []int, featureIndex
 	irrelevantCols = convertToZeroBased(irrelevantCols)
 	irrelevantRows = convertToZeroBased(irrelevantRows)
 
+	groupIndex, featureIndex = adjustIndices(groupIndex, featureIndex, irrelevantCols)
+
 	file, err := os.Open(filepath)
 	if err != nil {
 		panic(fmt.Sprintf("unable to open file %s: %v", filepath, err))
@@ -145,4 +147,19 @@ func convertToZeroBased(indices []int) []int {
 		zeroBased[i] = idx - 1
 	}
 	return zeroBased
+}
+
+func adjustIndices(groupIndex, featureIndex int, irrelevantCols []int) (int, int) {
+    // Sort them ascending
+    sort.Ints(irrelevantCols)
+
+    for _, col := range irrelevantCols {
+        if col <= groupIndex {
+            groupIndex--
+        }
+        if col <= featureIndex {
+            featureIndex--
+        }
+    }
+    return groupIndex, featureIndex
 }
